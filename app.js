@@ -8,7 +8,7 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 (function () {
 
     'use strict';
-    
+
 	var canvas = document.querySelector('canvas');
     var stage = new Facade(canvas),
         controls = new Gamepad(),
@@ -16,6 +16,7 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
         objects = {
             playerA: null,
             playerB: null,
+            stageWalls: [],
             projectiles: []
         },
         playerBounds = {
@@ -27,7 +28,7 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 	var playerSizeWidth = 100;
 	var playerSizeHeight = 160;
 
-	init();    
+	init();
 
     stage.resizeForHDPI();
 
@@ -39,13 +40,13 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 
         this.addToStage(objects.playerA);
         this.addToStage(objects.playerB);
-        
+
         objects.projectiles.forEach(function(projectile) {
 	    	stage.addToStage(projectile);
         });
 
-		
-        //world.Box2D('drawDebug');
+
+       	//world.Box2D('drawDebug');
 
     });
 
@@ -63,38 +64,37 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
     }
 
 	function movePlayer(p, moveX, moveY) {
-	
+
 		var player = p == 'p1' ? objects.playerA : objects.playerB;
 		var bounds = p == 'p1' ? playerBounds.playerA : playerBounds.playerB;
-		
+
 		var playerState = player.Box2D('getCurrentState');
 		var playerPosition = player.Box2D('getPosition')
-				
+
 		var x = playerPosition.x + moveX;
 		var y = playerPosition.y + moveY;
-		
+
 		if (moveX < 0 && playerState.x < bounds.left) x = playerPosition.x;
 		if (moveX > 0 && playerState.x + playerSizeWidth > bounds.right) x = playerPosition.x;
 		if (moveY < 0 && playerState.y < bounds.top) y = playerPosition.y;
 		if (moveY > 0 && playerState.y + playerSizeHeight > bounds.bottom) y = playerPosition.y;
-		
+
         player.Box2D('setPosition', x, y);
-		
+
 	}
-	
+
 	function fire(p) {
-		
+
 		var playerA = p == 'p1';
-		
+
 		var player = playerA ? objects.playerA : objects.playerB;
-	
+
 		var playerState = player.Box2D('getCurrentState');
-		var playerPosition = player.Box2D('getPosition');				
-		
-		var projectileX = playerA ?  playerState.x + playerSizeWidth : playerState.x;
-		
+
+		var projectileX = playerA ?  playerState.x + playerSizeWidth + 50 : playerState.x - 50;
+
 		var velocityX = playerA ? 50 : -50;
-				
+
 		var projectile = new Facade.Rect({
 			"x": projectileX,
 			"y": playerState.y,
@@ -105,39 +105,68 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 
         projectile.Box2D('createObject', world, {
             "type": "dynamic",
-            "rotate": true
+            "rotate": true,
+            "restitution": 0
         });
-	
+
 		projectile.Box2D('setVelocity', velocityX, 0);
-	
+
+
+		var projectileId = objects.projectiles.length;
+
+		projectile.Box2D('setCallback', 'BeginContact', function (a, b) {
+			console.log('A => ', a);
+			console.log('b => ', b);
+			console.log('projectileId => ', projectileId);
+
+			var tmpVelocity = b.Box2D('getVelocity');
+
+			if (a && a.Box2D) {
+
+				a.Box2D('destroyObject');
+
+				setTimeout(function () {
+
+					b.Box2D('setVelocity', tmpVelocity.x, tmpVelocity.y);
+				});
+
+				//self.data.rects.splice(self.data.rects.indexOf(self.data.objects[key]), 1);
+
+				delete objects.projectiles[projectileId];
+
+			}
+
+
+		});
+
 		objects.projectiles.push(projectile);
-		
+
 		console.log('tracking ' + objects.projectiles.length + ' projectiles!');
-		
+
 	}
 
 
 
-        
+
     function init() {
-	    	
-    	sizeCanvas();
-    	
+
+    	//sizeCanvas();
+
     	createPlayers();
-    	
+
     	attachControls();
-    	
+
     	calculcatePlayerBounds();
-    	
+
     	positionPlayers();
-    		
-		$(window).bind("resize", sizeCanvas);
-	    
+
+		//$(window).bind("resize", sizeCanvas);
+
     }
-    
+
     function createPlayers() {
-	    
-	     objects.playerA = generateEntityFromObject({ 
+
+	     objects.playerA = generateEntityFromObject({
 	     	"options": {
 	                "x": 150,
 	                "y": 390,
@@ -152,7 +181,7 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 	        }
 	     );
 
-	    
+
 	     objects.playerB = generateEntityFromObject({
             "options": {
                 "x": 650,
@@ -166,11 +195,11 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
                 "rotate": false
             }
 	    });
-	    
+
 	}
-	
+
 	function attachControls() {
-		
+
 	    controls.on('press', 'p1_fire', function () {
 			fire('p1');
 	    });
@@ -186,9 +215,9 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 	    controls.on('hold', 'p1_down', function () {
 	        movePlayer('p1', 0, playerMoveSpeed);
 	    });
-	    
-	    
-	    
+
+
+
 	    controls.on('press', 'p2_fire', function () {
 			fire('p2');
 	    });
@@ -204,51 +233,65 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 	    controls.on('hold', 'p2_down', function () {
 	        movePlayer('p2', 0, playerMoveSpeed);
 	    });
-		
+
 	}
-	
+
 	function calculcatePlayerBounds() {
-		
+
 		var width = stage._width;
 		var height = stage._height;
 		var padding = 8;
-		
+
 		playerBounds = {
-			playerA: { 
-				top: 0, 
-				bottom: height, 
-				left: 0, 
+			playerA: {
+				top: 0,
+				bottom: height,
+				left: 0,
 				right: width / 2 - padding
 			},
-			playerB: { 
-				top: 0, 
-				bottom: height, 
-				left: width / 2 + padding, 
-				right: width 
+			playerB: {
+				top: 0,
+				bottom: height,
+				left: width / 2 + padding,
+				right: width
 			}
 		}
-		
-	}
-	
-	function positionPlayers() {
-		
-		
-		
+
 	}
 
-    
+	function createStageWalls() {
+
+		objects.stageWalls.push({
+
+
+
+		});
+
+
+
+
+
+	}
+
+	function positionPlayers() {
+
+
+
+	}
+
+
 	function setupProjectileCollisionDetection() {
-		
-	}	
-	
+
+	}
+
 	function sizeCanvas() {
-	
+
 	    var w = $(window).width();
 	    var h = $(window).height();
-	
+
 	    $(canvas).css("width", w + "px");
-	    $(canvas).css("height", h + "px"); 
+	    $(canvas).css("height", h + "px");
 	}
-	
+
 
 }());
