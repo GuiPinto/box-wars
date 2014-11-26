@@ -21,18 +21,14 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
         },
         data = {
         	players: [],
-        	scores: {}
-        },
-        playerBounds = [
-	    	{ top: 0, bottom: 0, left: 0, right: 0 },
-	    	{ top: 0, bottom: 0, left: 0, right: 0 }
-        ]
+        	scores: {},
+        	playerBounds: [
+	    		{ top: 0, bottom: 0, left: 0, right: 0 },
+	    		{ top: 0, bottom: 0, left: 0, right: 0 }
+        	]
+        }
 
     var gameData = gameData();
-
-	var playerMoveSpeed = 0.5;
-	var playerSizeWidth = 100;
-	var playerSizeHeight = 160;
 
 	init();
 
@@ -74,41 +70,48 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 
     }
 
-	function movePlayer(p, moveX, moveY) {
+	function movePlayer(playerId, moveX, moveY) {
 
-		var player = p == 'p1' ? objects.players[0] : objects.players[1];
-		var bounds = p == 'p1' ? playerBounds[0] : playerBounds[1];
+		var playerObj = objects.players[playerId];
+		var playerData = data.players[playerId];
+		var playerBounds = data.playerBounds[playerId];
 
-		var playerState = player.Box2D('getCurrentState');
-		var playerPosition = player.Box2D('getPosition')
+		var playerState = playerObj.Box2D('getCurrentState');
+		var playerPosition = playerObj.Box2D('getPosition')
 
 		var x = playerPosition.x + moveX;
 		var y = playerPosition.y + moveY;
 
-		if (moveX < 0 && playerState.x < bounds.left) x = playerPosition.x;
-		if (moveX > 0 && playerState.x + playerSizeWidth > bounds.right) x = playerPosition.x;
-		if (moveY < 0 && playerState.y < bounds.top) y = playerPosition.y;
-		if (moveY > 0 && playerState.y + playerSizeHeight > bounds.bottom) y = playerPosition.y;
+		if (moveX < 0 && playerState.x < playerBounds.left)
+			x = playerPosition.x;
+		if (moveX > 0 && playerState.x + playerData.options.width > playerBounds.right)
+			x = playerPosition.x;
+		if (moveY < 0 && playerState.y < playerBounds.top)
+			y = playerPosition.y;
+		if (moveY > 0 && playerState.y + playerData.options.height > playerBounds.bottom)
+			y = playerPosition.y;
 
-        player.Box2D('setPosition', x, y);
+        playerObj.Box2D('setPosition', x, y);
 
 	}
 
-	function fire(p) {
+	function fire(playerId, projectileId) {
 
-		var firstPlayer = p == 'p1';
+		var firstPlayer = playerId == 0;
 
-		var playerObj = firstPlayer ? objects.players[0] : objects.players[1];
-		var playerData = firstPlayer ? data.players[0] : data.players[1];
+		var playerObj = objects.players[playerId];
+		var playerData = data.players[playerId];
 
 		var playerState = playerObj.Box2D('getCurrentState');
 
 		// Choose projectile
-		var selectedProjectileId = playerData.projectile ? playerData.projectile : 'largebox';
-		var projectileData = gameData.projectiles[selectedProjectileId];
-		if (!projectileData) return;
+		var projectileData = gameData.projectiles[projectileId];
+		if (!projectileData) {
+			console.log("Invalid Projectile ID ", projectileId);
+			return;
+		}
 
-		playerData.projectile = Object.keys(gameData.projectiles)[Math.floor(Math.random()*Object.keys(gameData.projectiles).length)];
+		//playerData.projectile = Object.keys(gameData.projectiles)[Math.floor(Math.random()*Object.keys(gameData.projectiles).length)];
 
 		// Create projectile
 		var projectile;
@@ -121,7 +124,7 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 
 		// Apply positioning
 		projectile.setOptions({
-			x: firstPlayer ?  playerState.x + playerSizeWidth + 1 : playerState.x - projectileData.options.width-1,
+			x: firstPlayer ?  playerState.x + playerData.options.width + 1 : playerState.x - projectileData.options.width-1,
 			y: playerState.y
 		});
 
@@ -143,7 +146,7 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 		// Apply custom properties
 		projectile.type = 'projectile';
 		projectile.projectileId = projectileId;
-		projectile.player = firstPlayer ? 0 : 1;
+		projectile.player = playerId;
 		projectile.hit = false;
 
 		objects.projectiles.push(projectile);
@@ -176,11 +179,13 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
     	for (var playerId in gameData.players) {
     		var playerData = gameData.players[playerId];
 
-    		var player = generateEntityFromObject({
-		     	"options": playerData.options,
-		     	"box2d_properties": playerData["box2d_properties"]
-		    });
+    		// Create player rectangle
+      		var player = new Facade.Rect(playerData.options);
 
+      		// Create Box2D Object
+       	 	player.Box2D('createObject', world, playerData.box2d_properties);
+
+       	 	// Attach custom attributes
     		player.type = 'player';
     		player.player = playerId;
 
@@ -193,38 +198,41 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 
 	function attachControls() {
 
+		var player1Data = data.players[0];
+		var player2Data = data.players[1];
+
 	    controls.on('press', 'p1_fire', function () {
-			fire('p1');
+			fire(0, player1Data.projectile);
 	    });
 	    controls.on('hold', 'p1_left', function () {
-	        movePlayer('p1', -playerMoveSpeed, 0);
+	        movePlayer(0, -(player1Data.moveSpeed[0]), 0);
 	    });
 	    controls.on('hold', 'p1_right', function () {
-	        movePlayer('p1', playerMoveSpeed, 0);
+	        movePlayer(0, player1Data.moveSpeed[0], 0);
 	    });
 	    controls.on('hold', 'p1_up', function () {
-	        movePlayer('p1', 0, -playerMoveSpeed);
+	        movePlayer(0, 0, -(player1Data.moveSpeed[1]));
 	    });
 	    controls.on('hold', 'p1_down', function () {
-	        movePlayer('p1', 0, playerMoveSpeed);
+	        movePlayer(0, 0, player1Data.moveSpeed[1]);
 	    });
 
 
 
 	    controls.on('press', 'p2_fire', function () {
-			fire('p2');
+			fire(1, player2Data.projectile);
 	    });
 	    controls.on('hold', 'p2_left', function () {
-	        movePlayer('p2', -playerMoveSpeed, 0);
+	        movePlayer(1, -(player2Data.moveSpeed[0]), 0);
 	    });
 	    controls.on('hold', 'p2_right', function () {
-	        movePlayer('p2', playerMoveSpeed, 0);
+	        movePlayer(1, player2Data.moveSpeed[0], 0);
 	    });
 	    controls.on('hold', 'p2_up', function () {
-	        movePlayer('p2', 0, -playerMoveSpeed);
+	        movePlayer(1, 0, -(player2Data.moveSpeed[1]));
 	    });
 	    controls.on('hold', 'p2_down', function () {
-	        movePlayer('p2', 0, playerMoveSpeed);
+	        movePlayer(1, 0, player2Data.moveSpeed[1]);
 	    });
 
 	}
@@ -235,13 +243,13 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 		var height = stage._height;
 		var padding = 8;
 
-		playerBounds[0] = {
+		data.playerBounds[0] = {
 			top: 0,
 			bottom: height,
 			left: 0,
 			right: width / 2 - padding
 		};
-		playerBounds[1] = {
+		data.playerBounds[1] = {
 			top: 0,
 			bottom: height,
 			left: width / 2 + padding,
@@ -344,6 +352,8 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 							var metrics = a.getAllMetrics();
 							explosion(b.type, metrics.x, metrics.y);
 
+						} else {
+							console.log('handleCollision fall-through: a is gone! (1)');
 						}
 
 					}, 100);
@@ -368,6 +378,8 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 					var metrics = a.getAllMetrics();
 					explosion(b.type, metrics.x, metrics.y);
 
+				} else {
+					console.log('handleCollision fall-through: a is gone! (2)');
 				}
 
 			}
@@ -445,7 +457,8 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 	                "type": "kinematic",
 	                "rotate": false
 	            },
-		        'projectile': "minibox"
+		        "projectile": "minibox",
+		        "moveSpeed": [0.5, 0.5]
 			}, {
 		     	"options": {
 	                "x": 650,
@@ -458,7 +471,8 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 	                "type": "kinematic",
 	                "rotate": false
 	            },
-		        'projectile': "largebox"
+		        "projectile": "largebox",
+		        "moveSpeed": [0.5, 0.5]
 			}],
 			projectiles: {
 				'minibox': {
