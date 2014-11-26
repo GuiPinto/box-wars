@@ -20,7 +20,8 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
             effects: []
         },
         data = {
-        	players: []
+        	players: [],
+        	scores: {}
         },
         playerBounds = [
 	    	{ top: 0, bottom: 0, left: 0, right: 0 },
@@ -29,7 +30,7 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 
     var gameData = gameData();
 
-	var playerMoveSpeed = 0.4;
+	var playerMoveSpeed = 0.5;
 	var playerSizeWidth = 100;
 	var playerSizeHeight = 160;
 
@@ -360,7 +361,6 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 
 				if (a && a.Box2D) {
 
-
 					a.Box2D('destroyObject');
 
 					delete objects.projectiles[projectileId];
@@ -431,8 +431,8 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 		     	"options": {
 	                "x": 150,
 	                "y": 390,
-	                "width": 100,
-	                "height": 160,
+	                "width": 90,
+	                "height": 150,
 	                "fillStyle": "#FF9900"
 	            },
 	            "box2d_properties": {
@@ -444,8 +444,8 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 		     	"options": {
 	                "x": 650,
 	                "y": 390,
-	                "width": 100,
-	                "height": 160,
+	                "width": 90,
+	                "height": 150,
 	                "fillStyle": "#007AB5"
 	            },
 	            "box2d_properties": {
@@ -486,7 +486,7 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 						"height": 100,
 						"fillStyle": "#f0f"
 					},
-					'velocity': [40, 0]
+					'velocity': [25, 0]
 				},
 				'shockwave': {
 					'type': 'rect',
@@ -497,7 +497,7 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 						"height": 170,
 						"fillStyle": "#f0f"
 					},
-					'velocity': [40, 0]
+					'velocity': [35, 0]
 				}
 			}
 		};
