@@ -342,7 +342,7 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 							delete objects.projectiles[projectileId];
 
 							var metrics = a.getAllMetrics();
-							explode(b.type, metrics.x, metrics.y);
+							explosion(b.type, metrics.x, metrics.y);
 
 						}
 
@@ -366,51 +366,57 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 					delete objects.projectiles[projectileId];
 
 					var metrics = a.getAllMetrics();
-					explode(b.type, metrics.x, metrics.y);
+					explosion(b.type, metrics.x, metrics.y);
 
 				}
 
 			}
+		} else {
+			console.log("handleCollision fall-through! a: ", a, ", b: ", b);
 		}
 
 	}
 
 
-	function explode(targetType, x, y) {
+	function explosion(targetType, x, y) {
 
-		var explosion;
-		if (targetType == 'projectile' || targetType == 'wall') {
-			explosion = new Facade.Image('http://endgate.net/Content/Samples/AnimatedSprites/images/fire_explosion.png', {
-			    x: x,
-			    y: y,
-			    scale: 1,
-			    width: 128,
-			    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8],
-			    anchor: 'center'
-			});
-		} else {
-			explosion = new Facade.Image('http://fc02.deviantart.net/fs71/f/2013/010/9/f/explosion_spritesheet_for_games_by_gintasdx-d5r28q5.png', {
-			    x: x,
-			    y: y,
-			    scale: 1,
-			    width: 128,
-			    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
-			    anchor: 'center'
-			});
+		var explosionKey = '';
+		switch(targetType) {
+			default:
+			case 'projectile':
+			case 'wall':
+				explosionKey = 'quickie';
+			break;
+			case 'player':
+				explosionKey = 'playerHit';
+			break;
 		}
+
+		var explosionData = gameData.explosions[explosionKey];
+		if (!explosionData) {
+			console.log("Explosion Data Not Found For Key " + explosionKey);
+			return;
+		}
+
+		// Setup our custom attributes and callbacks
+		var effectId = objects.effects.length;
+		explosionData.x = x;
+		explosionData.y = y;
+		explosionData.callback = function(frame) {
+			if (frame != explosionData.frames.length - 1)
+				return;
+
+			// Our animation is over, delete ourselves.
+			delete objects.effects[effectId];
+		};
+
+		var explosion = new Facade.Image(explosionData.url, explosionData);
 
 		explosion.play();
 
-		explosion.effectId = objects.effects.length;
+		explosion.effectId = effectId;
 
 		objects.effects.push(explosion);
-
-		setTimeout(function() {
-
-			delete objects.effects[explosion.effectId];
-
-		}, 1000);
-
 	}
 
 	function sizeCanvas() {
@@ -498,6 +504,28 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 						"fillStyle": "#f0f"
 					},
 					'velocity': [35, 0]
+				}
+			},
+			explosions: {
+				'quickie': {
+					url: 'http://endgate.net/Content/Samples/AnimatedSprites/images/fire_explosion.png',
+				    x: 0,
+				    y: 0,
+				    scale: 1,
+				    width: 128,
+				    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8],
+				    anchor: 'center',
+				    speed: 60
+				},
+				'playerHit': {
+					url: 'http://fc02.deviantart.net/fs71/f/2013/010/9/f/explosion_spritesheet_for_games_by_gintasdx-d5r28q5.png',
+				    x: 0,
+				    y: 0,
+				    scale: 1,
+				    width: 128,
+				    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+				    anchor: 'center',
+				    speed: 30
 				}
 			}
 		};
