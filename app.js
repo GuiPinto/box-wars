@@ -14,15 +14,19 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
         controls = new Gamepad(),
         world = new Facade.Entity().Box2D('createWorld', { canvas: stage.canvas, gravity: [ 0, 0 ] }),
         objects = {
-            playerA: null,
-            playerB: null,
+        	players: [],
             stageWalls: [],
             projectiles: []
         },
-        playerBounds = {
-	    	playerA: { top: 0, bottom: 0, left: 0, right: 0 },
-	    	playerB: { top: 0, bottom: 0, left: 0, right: 0 }
-        }
+        data = {
+        	players: []
+        },
+        playerBounds = [
+	    	{ top: 0, bottom: 0, left: 0, right: 0 },
+	    	{ top: 0, bottom: 0, left: 0, right: 0 }
+        ]
+
+    var gameData = gameData();
 
 	var playerMoveSpeed = 0.4;
 	var playerSizeWidth = 100;
@@ -38,13 +42,13 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 
         world.Box2D('step');
 
-        this.addToStage(objects.playerA);
-        this.addToStage(objects.playerB);
+        this.addToStage(objects.players);
+        this.addToStage(objects.stageWalls);
 
+//        this.addToStage(objects.projectiles);
         objects.projectiles.forEach(function(projectile) {
 	    	stage.addToStage(projectile);
         });
-
 
        	//world.Box2D('drawDebug');
 
@@ -65,8 +69,8 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 
 	function movePlayer(p, moveX, moveY) {
 
-		var player = p == 'p1' ? objects.playerA : objects.playerB;
-		var bounds = p == 'p1' ? playerBounds.playerA : playerBounds.playerB;
+		var player = p == 'p1' ? objects.players[0] : objects.players[1];
+		var bounds = p == 'p1' ? playerBounds[0] : playerBounds[1];
 
 		var playerState = player.Box2D('getCurrentState');
 		var playerPosition = player.Box2D('getPosition')
@@ -85,39 +89,50 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 
 	function fire(p) {
 
-		var playerA = p == 'p1';
+		var firstPlayer = p == 'p1';
 
-		var player = playerA ? objects.playerA : objects.playerB;
+		var playerObj = firstPlayer ? objects.players[0] : objects.players[1];
+		var playerData = firstPlayer ? data.players[0] : data.players[1];
 
-		var playerState = player.Box2D('getCurrentState');
+		var playerState = playerObj.Box2D('getCurrentState');
 
-		var projectileX = playerA ?  playerState.x + playerSizeWidth + 50 : playerState.x - 50;
+		// Choose projectile
+		var selectedProjectileId = playerData.projectile ? playerData.projectile : 'largebox';
+		var projectileData = gameData.projectiles[selectedProjectileId];
+		if (!projectileData) return;
 
-		var velocityX = playerA ? 50 : -50;
+		// Create projectile
+		var projectile;
+		switch(projectileData.type) {
+			default:
+			case 'rect':
+				projectile = new Facade.Rect(projectileData.options);
+			break;
+		}
 
-		var projectile = new Facade.Rect({
-			"x": projectileX,
-			"y": playerState.y,
-			"width": 20,
-			"height": 15,
-			"fillStyle": "#0ff"
+		// Apply positioning
+		projectile.setOptions({
+			x: firstPlayer ?  playerState.x + playerSizeWidth + projectileData.options.width+1 : playerState.x - projectileData.options.width-1,
+			y: playerState.y
 		});
 
+		// Create box2D object
         projectile.Box2D('createObject', world, {
             "type": "dynamic",
             "rotate": true,
             "restitution": 0
         });
 
-		projectile.Box2D('setVelocity', velocityX, 0);
+        // Set Box2d velocity (X and Y)
+        var velocityX = firstPlayer ? projectileData.velocity[0] : -(projectileData.velocity[0]);
+		projectile.Box2D('setVelocity', velocityX, projectileData.velocity[1]);
 
-
+		// Setup projectile collision detection
 		var projectileId = objects.projectiles.length;
-
 		projectile.Box2D('setCallback', 'BeginContact', function (a, b) {
-			console.log('A => ', a);
-			console.log('b => ', b);
-			console.log('projectileId => ', projectileId);
+			//console.log('A => ', a);
+			//console.log('b => ', b);
+			console.log('collision on projectileId: ', projectileId);
 
 			var tmpVelocity = b.Box2D('getVelocity');
 
@@ -130,12 +145,8 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 					b.Box2D('setVelocity', tmpVelocity.x, tmpVelocity.y);
 				});
 
-				//self.data.rects.splice(self.data.rects.indexOf(self.data.objects[key]), 1);
-
 				delete objects.projectiles[projectileId];
-
 			}
-
 
 		});
 
@@ -152,6 +163,8 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 
     	//sizeCanvas();
 
+    	createStageWalls();
+
     	createPlayers();
 
     	attachControls();
@@ -166,35 +179,17 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 
     function createPlayers() {
 
-	     objects.playerA = generateEntityFromObject({
-	     	"options": {
-	                "x": 150,
-	                "y": 390,
-	                "width": playerSizeWidth,
-	                "height": playerSizeHeight,
-	                "fillStyle": "#0f0"
-	            },
-	            "box2d_properties": {
-	                "type": "kinematic",
-	                "rotate": false
-	            }
-	        }
-	     );
+    	gameData.players.forEach(function(playerData) {
 
+    		var player = generateEntityFromObject({
+		     	"options": playerData.options,
+		     	"box2d_properties": playerData["box2d_properties"]
+		    });
 
-	     objects.playerB = generateEntityFromObject({
-            "options": {
-                "x": 650,
-                "y": 390,
-                "width": playerSizeWidth,
-                "height": playerSizeHeight,
-                "fillStyle": "#ff0"
-            },
-            "box2d_properties": {
-                "type": "kinematic",
-                "rotate": false
-            }
-	    });
+    		objects.players.push(player);
+
+    		data.players.push(playerData);
+    	});
 
 	}
 
@@ -242,34 +237,77 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 		var height = stage._height;
 		var padding = 8;
 
-		playerBounds = {
-			playerA: {
-				top: 0,
-				bottom: height,
-				left: 0,
-				right: width / 2 - padding
-			},
-			playerB: {
-				top: 0,
-				bottom: height,
-				left: width / 2 + padding,
-				right: width
-			}
+		playerBounds[0] = {
+			top: 0,
+			bottom: height,
+			left: 0,
+			right: width / 2 - padding
+		};
+		playerBounds[1] = {
+			top: 0,
+			bottom: height,
+			left: width / 2 + padding,
+			right: width
 		}
 
 	}
 
 	function createStageWalls() {
 
-		objects.stageWalls.push({
+		var width = stage._width;
+		var height = stage._height;
+		var wallSize = 8;
 
+		// Left Wall
+		objects.stageWalls.push(
+			new Facade.Rect({
+				"x": -wallSize,
+				"y": 0,
+				"width": wallSize,
+				"height": height,
+				"fillStyle": "#0ff"
+			})
+		);
 
+		// Right Wall
+		objects.stageWalls.push(
+			new Facade.Rect({
+				"x": width,
+				"y": 0,
+				"width": wallSize,
+				"height": height,
+				"fillStyle": "#0ff"
+			})
+		);
 
+		// Top Wall
+		objects.stageWalls.push(
+			new Facade.Rect({
+				"x": 0,
+				"y": -wallSize,
+				"width": width,
+				"height": wallSize,
+				"fillStyle": "#0ff"
+			})
+		);
+
+		// Bottom Wall
+		objects.stageWalls.push(
+			new Facade.Rect({
+				"x": 0,
+				"y": height,
+				"width": width,
+				"height": wallSize,
+				"fillStyle": "#0ff"
+			})
+		);
+
+		objects.stageWalls.forEach(function(stageWall) {
+			stageWall.Box2D('createObject', world, {
+	            "type": "kinematic",
+	            "rotate": false
+	        });
 		});
-
-
-
-
 
 	}
 
@@ -280,10 +318,6 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 	}
 
 
-	function setupProjectileCollisionDetection() {
-
-	}
-
 	function sizeCanvas() {
 
 	    var w = $(window).width();
@@ -291,6 +325,71 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 
 	    $(canvas).css("width", w + "px");
 	    $(canvas).css("height", h + "px");
+	}
+
+
+	function gameData() {
+
+
+
+		var data = {
+			players: [
+				{
+			     	"options": {
+		                "x": 150,
+		                "y": 390,
+		                "width": 100,
+		                "height": 160,
+		                "fillStyle": "#FF9900"
+		            },
+		            "box2d_properties": {
+		                "type": "kinematic",
+		                "rotate": false
+		            },
+			        'projectile': "minibox"
+				}, {
+			     	"options": {
+		                "x": 650,
+		                "y": 390,
+		                "width": 100,
+		                "height": 160,
+		                "fillStyle": "#007AB5"
+		            },
+		            "box2d_properties": {
+		                "type": "kinematic",
+		                "rotate": false
+		            },
+			        'projectile': "largebox"
+				},
+			],
+			projectiles: {
+				'minibox': {
+					'type': 'rect',
+					'options': {
+						"x": 0,
+						"y": 0,
+						"width": 20,
+						"height": 15,
+						"fillStyle": "#0ff"
+					},
+					'velocity': [50, 0]
+				},
+				'largebox': {
+					'type': 'rect',
+					'options': {
+						"x": 0,
+						"y": 0,
+						"width": 40,
+						"height": 30,
+						"fillStyle": "#0ff"
+					},
+					'velocity': [40, 0]
+				}
+			}
+		};
+
+		return data;
+
 	}
 
 
