@@ -396,11 +396,12 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 		switch(targetType) {
 			default:
 			case 'projectile':
-			case 'wall':
-				explosionKey = 'quickie';
+				explosionKey = 'projectileImpact';
 			break;
+			case 'wall':
+				explosionKey = 'wallImpact';
 			case 'player':
-				explosionKey = 'playerHit';
+				explosionKey = 'playerImpact';
 			break;
 		}
 
@@ -408,6 +409,11 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 		if (!explosionData) {
 			console.log("Explosion Data Not Found For Key " + explosionKey);
 			return;
+		}
+
+		// If explosion-data is an array, pick a random item from within it.
+		if (explosionData instanceof Array) {
+			explosionData = explosionData[Math.floor(Math.random()*explosionData.length)];
 		}
 
 		// Setup our custom attributes and callbacks
@@ -521,26 +527,37 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 				}
 			},
 			explosions: {
-				'quickie': {
+				'playerImpact': [{
 					url: 'http://endgate.net/Content/Samples/AnimatedSprites/images/fire_explosion.png',
-				    x: 0,
-				    y: 0,
+				    scale: 0.6,
+				    width: 128,
+				    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8],
+				    anchor: 'center',
+				    speed: 45
+				}, {
+					url: 'http://fc02.deviantart.net/fs71/f/2013/010/9/f/explosion_spritesheet_for_games_by_gintasdx-d5r28q5.png',
+				    scale: 1,
+				    width: 128,
+				    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+				    anchor: 'center',
+				    speed: 30
+				}],
+				'wallImpact': {
+					url: 'http://endgate.net/Content/Samples/AnimatedSprites/images/fire_explosion.png',
 				    scale: 1,
 				    width: 128,
 				    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8],
 				    anchor: 'center',
 				    speed: 60
 				},
-				'playerHit': {
-					url: 'http://fc02.deviantart.net/fs71/f/2013/010/9/f/explosion_spritesheet_for_games_by_gintasdx-d5r28q5.png',
-				    x: 0,
-				    y: 0,
-				    scale: 1,
-				    width: 128,
-				    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+				'projectileImpact': {
+					url: 'http://i-am-bryan.com/webs/wp-content/uploads/2012/12/Explosion-Sprite-Sheet.png',
+				    scale: 1.5,
+				    width: 118,
+				    frames: [0, 1, 2, 3, 4],
 				    anchor: 'center',
-				    speed: 30
-				}
+				    speed: 60
+				},
 			}
 		};
 
