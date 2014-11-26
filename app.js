@@ -45,12 +45,12 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
         this.addToStage(objects.players);
         this.addToStage(objects.stageWalls);
 
-//        this.addToStage(objects.projectiles);
         objects.projectiles.forEach(function(projectile) {
-	    	stage.addToStage(projectile);
+        	if (projectile != undefined)
+	    		stage.addToStage(projectile);
         });
 
-       	//world.Box2D('drawDebug');
+		//world.Box2D('drawDebug');
 
     });
 
@@ -101,6 +101,8 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 		var projectileData = gameData.projectiles[selectedProjectileId];
 		if (!projectileData) return;
 
+		playerData.projectile = Object.keys(gameData.projectiles)[Math.floor(Math.random()*Object.keys(gameData.projectiles).length)];
+
 		// Create projectile
 		var projectile;
 		switch(projectileData.type) {
@@ -112,7 +114,7 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 
 		// Apply positioning
 		projectile.setOptions({
-			x: firstPlayer ?  playerState.x + playerSizeWidth + projectileData.options.width+1 : playerState.x - projectileData.options.width-1,
+			x: firstPlayer ?  playerState.x + playerSizeWidth + 1 : playerState.x - projectileData.options.width-1,
 			y: playerState.y
 		});
 
@@ -151,9 +153,7 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 		});
 
 		objects.projectiles.push(projectile);
-
-		console.log('tracking ' + objects.projectiles.length + ' projectiles!');
-
+		//console.log('tracking ' + objects.projectiles.length + ' projectiles!');
 	}
 
 
@@ -384,6 +384,17 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 						"fillStyle": "#0ff"
 					},
 					'velocity': [40, 0]
+				},
+				'giganticbox': {
+					'type': 'rect',
+					'options': {
+						"x": 0,
+						"y": 0,
+						"width": 200,
+						"height": 200,
+						"fillStyle": "#f0f"
+					},
+					'velocity': [10, 0]
 				}
 			}
 		};
