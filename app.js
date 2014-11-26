@@ -16,7 +16,8 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
         objects = {
         	players: [],
             stageWalls: [],
-            projectiles: []
+            projectiles: [],
+            effects: []
         },
         data = {
         	players: []
@@ -48,6 +49,11 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
         objects.projectiles.forEach(function(projectile) {
         	if (projectile != undefined)
 	    		stage.addToStage(projectile);
+        });
+
+        objects.effects.forEach(function(effect) {
+        	if (effect != undefined)
+	    		stage.addToStage(effect);
         });
 
 		//world.Box2D('drawDebug');
@@ -131,26 +137,13 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 
 		// Setup projectile collision detection
 		var projectileId = objects.projectiles.length;
-		projectile.Box2D('setCallback', 'BeginContact', function (a, b) {
-			//console.log('A => ', a);
-			//console.log('b => ', b);
-			console.log('collision on projectileId: ', projectileId);
+		projectile.Box2D('setCallback', 'BeginContact', handleCollision);
 
-			var tmpVelocity = b.Box2D('getVelocity');
-
-			if (a && a.Box2D) {
-
-				a.Box2D('destroyObject');
-
-				setTimeout(function () {
-
-					b.Box2D('setVelocity', tmpVelocity.x, tmpVelocity.y);
-				});
-
-				delete objects.projectiles[projectileId];
-			}
-
-		});
+		// Apply custom properties
+		projectile.type = 'projectile';
+		projectile.projectileId = projectileId;
+		projectile.player = firstPlayer ? 0 : 1;
+		projectile.hit = false;
 
 		objects.projectiles.push(projectile);
 		//console.log('tracking ' + objects.projectiles.length + ' projectiles!');
@@ -179,17 +172,21 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 
     function createPlayers() {
 
-    	gameData.players.forEach(function(playerData) {
+    	for (var playerId in gameData.players) {
+    		var playerData = gameData.players[playerId];
 
     		var player = generateEntityFromObject({
 		     	"options": playerData.options,
 		     	"box2d_properties": playerData["box2d_properties"]
 		    });
 
+    		player.type = 'player';
+    		player.player = playerId;
+
     		objects.players.push(player);
 
     		data.players.push(playerData);
-    	});
+    	};
 
 	}
 
@@ -258,41 +255,37 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 		var height = stage._height;
 		var wallSize = 8;
 
-		// Left Wall
-		objects.stageWalls.push(
+
+		objects.stageWalls = [
+
+			// Left Wall
 			new Facade.Rect({
 				"x": -wallSize,
 				"y": 0,
 				"width": wallSize,
 				"height": height,
 				"fillStyle": "#0ff"
-			})
-		);
+			}),
 
-		// Right Wall
-		objects.stageWalls.push(
+			// Right Wall
 			new Facade.Rect({
 				"x": width,
 				"y": 0,
 				"width": wallSize,
 				"height": height,
 				"fillStyle": "#0ff"
-			})
-		);
+			}),
 
-		// Top Wall
-		objects.stageWalls.push(
+			// Top Wall
 			new Facade.Rect({
 				"x": 0,
 				"y": -wallSize,
 				"width": width,
 				"height": wallSize,
 				"fillStyle": "#0ff"
-			})
-		);
+			}),
 
-		// Bottom Wall
-		objects.stageWalls.push(
+			// Bottom Wall
 			new Facade.Rect({
 				"x": 0,
 				"y": height,
@@ -300,13 +293,20 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 				"height": wallSize,
 				"fillStyle": "#0ff"
 			})
-		);
+
+		];
 
 		objects.stageWalls.forEach(function(stageWall) {
+
+			// Create Box2D Obj
 			stageWall.Box2D('createObject', world, {
 	            "type": "kinematic",
 	            "rotate": false
 	        });
+
+	        // Apply wall properties
+	        stageWall.type = 'wall';
+
 		});
 
 	}
@@ -317,6 +317,101 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 
 	}
 
+	function handleCollision(a, b) {
+
+		if ((a && !a.type) || (b && !b.type)) {
+			console.log('collision of object without TYPE!', a, b);
+			return;
+		}
+
+		if ((a && a.type == 'projectile') && (b && b.type == 'player')) {
+			var projectileId = a.projectileId;
+
+			if (a.hit !== true) {
+				a.hit = true;
+
+				if (a.player != b.player) {
+
+					setTimeout(function() {
+
+						if (a && a.Box2D) {
+
+							a.Box2D('destroyObject');
+
+							delete objects.projectiles[projectileId];
+
+							var metrics = a.getAllMetrics();
+							explode(b.type, metrics.x, metrics.y);
+
+						}
+
+					}, 100);
+
+				}
+			}
+		} else if (
+				(a && a.type == 'projectile') && (b && b.type == 'projectile') ||
+				(a && a.type == 'projectile') && (b && b.type == 'wall')
+		) {
+			var projectileId = a.projectileId;
+
+			if (a.hit !== true) {
+				a.hit = true;
+
+				if (a && a.Box2D) {
+
+
+					a.Box2D('destroyObject');
+
+					delete objects.projectiles[projectileId];
+
+					var metrics = a.getAllMetrics();
+					explode(b.type, metrics.x, metrics.y);
+
+				}
+
+			}
+		}
+
+	}
+
+
+	function explode(targetType, x, y) {
+
+		var explosion;
+		if (targetType == 'projectile' || targetType == 'wall') {
+			explosion = new Facade.Image('http://endgate.net/Content/Samples/AnimatedSprites/images/fire_explosion.png', {
+			    x: x,
+			    y: y,
+			    scale: 1,
+			    width: 128,
+			    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8],
+			    anchor: 'center'
+			});
+		} else {
+			explosion = new Facade.Image('http://fc02.deviantart.net/fs71/f/2013/010/9/f/explosion_spritesheet_for_games_by_gintasdx-d5r28q5.png', {
+			    x: x,
+			    y: y,
+			    scale: 1,
+			    width: 128,
+			    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+			    anchor: 'center'
+			});
+		}
+
+		explosion.play();
+
+		explosion.effectId = objects.effects.length;
+
+		objects.effects.push(explosion);
+
+		setTimeout(function() {
+
+			delete objects.effects[explosion.effectId];
+
+		}, 1000);
+
+	}
 
 	function sizeCanvas() {
 
@@ -331,37 +426,34 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 	function gameData() {
 
 
-
 		var data = {
-			players: [
-				{
-			     	"options": {
-		                "x": 150,
-		                "y": 390,
-		                "width": 100,
-		                "height": 160,
-		                "fillStyle": "#FF9900"
-		            },
-		            "box2d_properties": {
-		                "type": "kinematic",
-		                "rotate": false
-		            },
-			        'projectile': "minibox"
-				}, {
-			     	"options": {
-		                "x": 650,
-		                "y": 390,
-		                "width": 100,
-		                "height": 160,
-		                "fillStyle": "#007AB5"
-		            },
-		            "box2d_properties": {
-		                "type": "kinematic",
-		                "rotate": false
-		            },
-			        'projectile': "largebox"
-				},
-			],
+			players: [{
+		     	"options": {
+	                "x": 150,
+	                "y": 390,
+	                "width": 100,
+	                "height": 160,
+	                "fillStyle": "#FF9900"
+	            },
+	            "box2d_properties": {
+	                "type": "kinematic",
+	                "rotate": false
+	            },
+		        'projectile': "minibox"
+			}, {
+		     	"options": {
+	                "x": 650,
+	                "y": 390,
+	                "width": 100,
+	                "height": 160,
+	                "fillStyle": "#007AB5"
+	            },
+	            "box2d_properties": {
+	                "type": "kinematic",
+	                "rotate": false
+	            },
+		        'projectile': "largebox"
+			}],
 			projectiles: {
 				'minibox': {
 					'type': 'rect',
@@ -370,7 +462,7 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 						"y": 0,
 						"width": 20,
 						"height": 15,
-						"fillStyle": "#0ff"
+						"fillStyle": "#C688D8"
 					},
 					'velocity': [50, 0]
 				},
@@ -390,11 +482,22 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 					'options': {
 						"x": 0,
 						"y": 0,
-						"width": 200,
-						"height": 200,
+						"width": 100,
+						"height": 100,
 						"fillStyle": "#f0f"
 					},
-					'velocity': [10, 0]
+					'velocity': [40, 0]
+				},
+				'shockwave': {
+					'type': 'rect',
+					'options': {
+						"x": 0,
+						"y": 0,
+						"width": 30,
+						"height": 170,
+						"fillStyle": "#f0f"
+					},
+					'velocity': [40, 0]
 				}
 			}
 		};
