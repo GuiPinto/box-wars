@@ -25,10 +25,12 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
         	playerBounds: [
 	    		{ top: 0, bottom: 0, left: 0, right: 0 },
 	    		{ top: 0, bottom: 0, left: 0, right: 0 }
-        	]
-        }
+        	],
+        	cooldowns: {}
+        },
+        cleanProjectilesTick = 0,
+        gameData = gameData();
 
-    var gameData = gameData();
 
 	init();
 
@@ -54,6 +56,12 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
         });
 
 		//world.Box2D('drawDebug');
+
+		cleanProjectilesTick++;
+		if (cleanProjectilesTick == 100) {
+			cleanProjectilesTick = 0;
+			cleanLooseProjectiles();
+		}
 
     });
 
@@ -102,6 +110,16 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 		var playerObj = objects.players[playerId];
 		var playerData = data.players[playerId];
 
+		// Handle Cooldown
+		if (typeof data.cooldowns[playerId] === 'undefined') {
+			data.cooldowns[playerId] = setTimeout(function() {
+				data.cooldowns[playerId] = undefined;
+			}, playerData.cooldown ? playerData.cooldown : 100);
+		} else {
+			// Cooldown still active, return;
+			return;
+		}
+
 		var playerState = playerObj.Box2D('getCurrentState');
 
 		// Choose projectile
@@ -148,6 +166,7 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 		projectile.projectileId = projectileId;
 		projectile.player = playerId;
 		projectile.hit = false;
+		projectile.created = new Date().getTime();
 
 		objects.projectiles.push(projectile);
 		//console.log('tracking ' + objects.projectiles.length + ' projectiles!');
@@ -201,6 +220,18 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 		var player1Data = data.players[0];
 		var player2Data = data.players[1];
 
+		// Joystick support
+	    controls.on('hold', 'stick_axis_left', function (e) {
+	    	if (e.player == 'keyboard') return;
+	    	movePlayer(e.player, player1Data.moveSpeed[0] * e.value[0], player1Data.moveSpeed[0] * e.value[1]);
+	    });	
+	    controls.on('press', 'button_1', function (e) {
+	    	if (e.player == 'keyboard') return;
+			fire(e.player, player1Data.projectile);
+	    });
+
+
+	    // P1 Keyboard
 	    controls.on('press', 'p1_fire', function () {
 			fire(0, player1Data.projectile);
 	    });
@@ -218,7 +249,7 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 	    });
 
 
-
+	    // P2 Keyboard
 	    controls.on('press', 'p2_fire', function () {
 			fire(1, player2Data.projectile);
 	    });
@@ -326,6 +357,16 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 
 	}
 
+	function cleanLooseProjectiles() {
+		var age = 3 * 1000;
+		var threshold = new Date().getTime() - age;
+		for (var idx in objects.projectiles) {
+			if (objects.projectiles[idx].created <= threshold) {
+				delete objects.projectiles[idx];
+			}
+		}
+	}
+
 	function handleCollision(a, b) {
 
 		if ((a && !a.type) || (b && !b.type)) {
@@ -359,6 +400,8 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 					}, 100);
 
 				}
+			} else {
+				console.log('projectile already \'hit\'');
 			}
 		} else if (
 				(a && a.type == 'projectile') && (b && b.type == 'projectile') ||
@@ -382,6 +425,8 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 					console.log('handleCollision fall-through: a is gone! (2)');
 				}
 
+			} else {
+				console.log('projectile already \'hit\'');
 			}
 		} else {
 			console.log("handleCollision fall-through! a: ", a, ", b: ", b);
@@ -464,7 +509,8 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 	                "rotate": false
 	            },
 		        "projectile": "minibox",
-		        "moveSpeed": [0.5, 0.5]
+		        "moveSpeed": [0.5, 0.5],
+		        "cooldown": 400
 			}, {
 		     	"options": {
 	                "x": 650,
@@ -478,7 +524,8 @@ http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-ph
 	                "rotate": false
 	            },
 		        "projectile": "largebox",
-		        "moveSpeed": [0.5, 0.5]
+		        "moveSpeed": [0.5, 0.5],
+		        "cooldown": 400
 			}],
 			projectiles: {
 				'minibox': {
