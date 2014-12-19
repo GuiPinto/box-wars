@@ -1,9 +1,6 @@
 /*jslint browser: true */
 /*globals Facade, Gamepad, $ */
 
-/*
-http://minddotout.wordpress.com/2013/01/06/html5-space-invaders-with-box2dweb-physics/#bullets
-*/
 
 (function () {
 
