@@ -525,14 +525,14 @@
 			},
 			explosions: {
 				'playerImpact': [{
-					url: 'http://endgate.net/Content/Samples/AnimatedSprites/images/fire_explosion.png',
+					url: 'static/images/fire_explosion.png',
 				    scale: 0.6,
 				    width: 128,
 				    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8],
 				    anchor: 'center',
 				    speed: 45
 				}, {
-					url: 'http://fc02.deviantart.net/fs71/f/2013/010/9/f/explosion_spritesheet_for_games_by_gintasdx-d5r28q5.png',
+					url: 'static/images/explosion_lq.png',
 				    scale: 1,
 				    width: 128,
 				    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
@@ -540,7 +540,7 @@
 				    speed: 30
 				}],
 				'wallImpact': {
-					url: 'http://endgate.net/Content/Samples/AnimatedSprites/images/fire_explosion.png',
+					url: 'static/images/fire_explosion.png',
 				    scale: 1,
 				    width: 128,
 				    frames: [0, 1, 2, 3, 4, 5, 6, 7, 8],
@@ -548,7 +548,7 @@
 				    speed: 60
 				},
 				'projectileImpact': {
-					url: 'http://i-am-bryan.com/webs/wp-content/uploads/2012/12/Explosion-Sprite-Sheet.png',
+					url: 'static/images/explosion_hq.png',
 				    scale: 1.5,
 				    width: 118,
 				    frames: [0, 1, 2, 3, 4],
