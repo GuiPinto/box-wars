@@ -1,0 +1,10 @@
+{
+    "name": "box-wars",
+    "version": "0.0.1",
+    "private": true,
+    "dependencies": {
+        "jquery": "2.1.1",
+        "requirejs": "2.1.15",
+        "facadejs": "facadejs/Facade.js"
+    }
+}
