@@ -22,10 +22,12 @@
         	playerBounds: [
 	    		{ top: 0, bottom: 0, left: 0, right: 0 },
 	    		{ top: 0, bottom: 0, left: 0, right: 0 }
-        	]
-        }
+        	],
+        	cooldowns: {}
+        },
+        cleanProjectilesTick = 0,
+        gameData = gameData();
 
-    var gameData = gameData();
 
 	init();
 
@@ -51,6 +53,12 @@
         });
 
 		//world.Box2D('drawDebug');
+
+		cleanProjectilesTick++;
+		if (cleanProjectilesTick == 100) {
+			cleanProjectilesTick = 0;
+			cleanLooseProjectiles();
+		}
 
     });
 
@@ -99,6 +107,16 @@
 		var playerObj = objects.players[playerId];
 		var playerData = data.players[playerId];
 
+		// Handle Cooldown
+		if (typeof data.cooldowns[playerId] === 'undefined') {
+			data.cooldowns[playerId] = setTimeout(function() {
+				data.cooldowns[playerId] = undefined;
+			}, playerData.cooldown ? playerData.cooldown : 100);
+		} else {
+			// Cooldown still active, return;
+			return;
+		}
+
 		var playerState = playerObj.Box2D('getCurrentState');
 
 		// Choose projectile
@@ -145,6 +163,7 @@
 		projectile.projectileId = projectileId;
 		projectile.player = playerId;
 		projectile.hit = false;
+		projectile.created = new Date().getTime();
 
 		objects.projectiles.push(projectile);
 		//console.log('tracking ' + objects.projectiles.length + ' projectiles!');
@@ -198,6 +217,18 @@
 		var player1Data = data.players[0];
 		var player2Data = data.players[1];
 
+		// Joystick support
+	    controls.on('hold', 'stick_axis_left', function (e) {
+	    	if (e.player == 'keyboard') return;
+	    	movePlayer(e.player, player1Data.moveSpeed[0] * e.value[0], player1Data.moveSpeed[0] * e.value[1]);
+	    });	
+	    controls.on('press', 'button_1', function (e) {
+	    	if (e.player == 'keyboard') return;
+			fire(e.player, player1Data.projectile);
+	    });
+
+
+	    // P1 Keyboard
 	    controls.on('press', 'p1_fire', function () {
 			fire(0, player1Data.projectile);
 	    });
@@ -215,7 +246,7 @@
 	    });
 
 
-
+	    // P2 Keyboard
 	    controls.on('press', 'p2_fire', function () {
 			fire(1, player2Data.projectile);
 	    });
@@ -323,6 +354,16 @@
 
 	}
 
+	function cleanLooseProjectiles() {
+		var age = 3 * 1000;
+		var threshold = new Date().getTime() - age;
+		for (var idx in objects.projectiles) {
+			if (objects.projectiles[idx].created <= threshold) {
+				delete objects.projectiles[idx];
+			}
+		}
+	}
+
 	function handleCollision(a, b) {
 
 		if ((a && !a.type) || (b && !b.type)) {
@@ -356,6 +397,8 @@
 					}, 100);
 
 				}
+			} else {
+				console.log('projectile already \'hit\'');
 			}
 		} else if (
 				(a && a.type == 'projectile') && (b && b.type == 'projectile') ||
@@ -379,6 +422,8 @@
 					console.log('handleCollision fall-through: a is gone! (2)');
 				}
 
+			} else {
+				console.log('projectile already \'hit\'');
 			}
 		} else {
 			console.log("handleCollision fall-through! a: ", a, ", b: ", b);
@@ -461,7 +506,8 @@
 	                "rotate": false
 	            },
 		        "projectile": "minibox",
-		        "moveSpeed": [0.5, 0.5]
+		        "moveSpeed": [0.5, 0.5],
+		        "cooldown": 400
 			}, {
 		     	"options": {
 	                "x": 650,
@@ -475,7 +521,8 @@
 	                "rotate": false
 	            },
 		        "projectile": "largebox",
-		        "moveSpeed": [0.5, 0.5]
+		        "moveSpeed": [0.5, 0.5],
+		        "cooldown": 400
 			}],
 			projectiles: {
 				'minibox': {
