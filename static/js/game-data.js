@@ -1,6 +1,11 @@
+/*jslint browser: true */
+/*globals Facade, Gamepad, $ */
+
 define(function (require) {
 
-	var gameData = {
+    'use strict';
+
+    return {
 
 		players: [{
 	     	"options": {
@@ -15,7 +20,7 @@ define(function (require) {
                 "rotate": false
             },
 	        "projectile": "minibox",
-	        "moveSpeed": [0.5, 0.5]
+	        "moveSpeed": [0.1, 0.1]
 		}, {
 	     	"options": {
                 "x": 650,
@@ -111,7 +116,5 @@ define(function (require) {
 			},
 		}
 	};
-
-	return gameData;
 
 });
